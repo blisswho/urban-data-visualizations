@@ -60,23 +60,24 @@
     }
 
     mapboxgl.accessToken = 'pk.eyJ1IjoiYmxpc3NodTE2IiwiYSI6ImNqbmFvZnVzZDAxcTQzcG55M2pucTBjNjUifQ.XQQ4R3FogDC5TzGjM_wkVA';
-    var map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/mapbox/dark-v9',
-      center: [114.1979000, 22.6431212],
-      zoom: 10
+    const map = new mapboxgl.Map({
+     container: 'map',
+     style: 'mapbox://styles/ezhihan/cjnxksyxf09cc2rmx0o9mcbxw',
+     center: [114.1979000, 22.6531212],
+     zoom: 10
     });
+
 
     map.on('load', function() {
 
-      map.addSource('trees', {
+      map.addSource('network', {
         type: 'geojson',
-        data: 'tower-66-network-a-10-mins.geojson'
+        data: 'geojson_data/tower-0-network-b-10-mins.geojson'
       });
 
       map.addSource('bounds', {
         type: 'geojson',
-        data: 'shenzhen_boundary2.geojson'
+        data: 'shenzhen_boundary.geojson'
       })
 
       // add heatmap layer here
@@ -89,22 +90,20 @@
        'paint': {
            'line-color': '#FFF',
            'line-width': 1
-           // 'fill-opacity': 0.8
        }
       });
 
       map.addLayer({
-        id: 'trees-heat',
+        id: 'network-heat',
         type: 'heatmap',
-        source: 'trees',
+        source: 'network',
         maxzoom: 15,
         paint: {
-          // increase weight as diameter breast height increases
+          // increase weight as record value increases
           'heatmap-weight': {
             property: 'record',
             type: 'exponential',
             stops: [
-              // [50, 0.2],
               [1, 0],
               [50, 0.1],
               [100, 0.9],
@@ -116,10 +115,10 @@
           ['linear'],
           ['heatmap-density'],
           0, 'rgba(236,222,239,0)',
-          0.2, 'rgb(208,209,230)',
-          0.4, 'rgb(166,189,219)',
-          0.6, 'rgb(103,169,207)',
-          0.8, 'rgb(28,144,153)'
+          0.05, 'green',
+          0.2, 'yellow',
+          0.3, 'orange',
+          0.4, 'red'
         ],
           // increase intensity as zoom level increases
           'heatmap-intensity': {
@@ -150,9 +149,9 @@
 
       // add circle layer here
       map.addLayer({
-        id: 'trees-point',
+        id: 'network-point',
         type: 'circle',
-        source: 'trees',
+        source: 'network',
         minzoom: 14,
         paint: {
           // increase the radius of the circle as the zoom level and dbh value increases
@@ -189,27 +188,21 @@
           }
         }
       }, 'waterway-label');
+
+
+      // on a regular basis, add more coordinates from the saved list and update the map
+      var i = 0;
+      var timer = window.setInterval(function() {
+        if (i < 144) {
+          var datapath = "geojson_data/tower-"+i+"-network-b-10-mins.geojson";
+          map.getSource('network').setData(datapath);
+          i++;
+        }else{
+          i = 0;
+        }
+      }, 100);
+
     });
-
-    map.on('click', 'trees-point', function (e) {
-      new mapboxgl.Popup()
-      .setLngLat(e.features[0].geometry.coordinates)
-      .setHTML('<b>DBH:</b> '+ e.features[0].properties.record)
-      .addTo(map);
-    });
-
-    delay(function(){
-
-        // takeScreenshot(map).then(function(data){
-        //   saveAs(data, 'file-name.png');
-        //   map.removeLayer('trees-heat1')
-        // });
-
-        // map.setLayoutProperty('trees-heat1', 'visibility', 'none');
-        // map.setLayoutProperty('trees-point1', 'visibility', 'none');
-
-    }, 5000 ); // end delay
-
   </script>
 </body>
 </html>

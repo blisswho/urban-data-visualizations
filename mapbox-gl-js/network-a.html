@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script type="text/javascript" src="html2canvas.js"></script>
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.js'></script>
+    <script src='//api.tiles.mapbox.com/mapbox.js/plugins/leaflet-image/v0.0.4/leaflet-image.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.50.0/mapbox-gl.css' rel='stylesheet' />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"></script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+    </style>
+</head>
+<body>
+  <div id='map'></div>
+  <script>
+    var delay = ( function() {
+        var timer = 0;
+        return function(callback, ms) {
+            clearTimeout (timer);
+            timer = setTimeout(callback, ms);
+        };
+    })();
+
+    function saveAs(uri, filename) {
+      var link = document.createElement('a');
+      if (typeof link.download === 'string') {
+          link.href = uri;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+      } else {
+          window.open(uri);
+      }
+    }
+
+    function takeScreenshot(mabo) {
+      return new Promise(function(resolve, reject) {
+        mabo.once("render", function() {
+          resolve(mabo.getCanvas().toDataURL());
+        });
+        /* trigger render */
+        mabo.setBearing(mabo.getBearing());
+      })
+    }
+
+    mapboxgl.accessToken = 'pk.eyJ1IjoiYmxpc3NodTE2IiwiYSI6ImNqbmFvZnVzZDAxcTQzcG55M2pucTBjNjUifQ.XQQ4R3FogDC5TzGjM_wkVA';
+    const map = new mapboxgl.Map({
+     container: 'map',
+     style: 'mapbox://styles/ezhihan/cjnxksyxf09cc2rmx0o9mcbxw',
+     center: [114.1979000, 22.6531212],
+     zoom: 10
+    });
+
+
+    map.on('load', function() {
+
+      map.addSource('network', {
+        type: 'geojson',
+        data: 'geojson_data/tower-0-network-a-10-mins.geojson'
+      });
+
+      map.addSource('bounds', {
+        type: 'geojson',
+        data: 'shenzhen_boundary.geojson'
+      })
+
+      // add heatmap layer here
+
+      map.addLayer({
+       'id': 'shenzhen-boundary',
+       'type': 'line',
+       'source': 'bounds',
+       'layout': {},
+       'paint': {
+           'line-color': '#FFF',
+           'line-width': 1
+       }
+      });
+
+      map.addLayer({
+        id: 'network-heat',
+        type: 'heatmap',
+        source: 'network',
+        maxzoom: 15,
+        paint: {
+          // increase weight as record value increases
+          'heatmap-weight': {
+            property: 'record',
+            type: 'exponential',
+            stops: [
+              [1, 0],
+              [50, 0.1],
+              [100, 0.9],
+              [1000, 1],
+            ]
+          },
+          'heatmap-color': [
+          'interpolate',
+          ['linear'],
+          ['heatmap-density'],
+          0, 'rgba(236,222,239,0)',
+          0.2, 'green',
+          0.3, 'yellow',
+          0.5, 'orange',
+          0.6, 'red'
+        ],
+          // increase intensity as zoom level increases
+          'heatmap-intensity': {
+            stops: [
+              [10, 1],
+              [15, 3]
+            ]
+          },
+
+          // increase radius as zoom increases
+          'heatmap-radius': {
+            stops: [
+              [10, 10],
+              [11, 15],
+              [15, 20]
+            ]
+          },
+          // decrease opacity to transition into the circle layer
+          'heatmap-opacity': {
+            default: 1,
+            stops: [
+              [14, 1],
+              [15, 0]
+            ]
+          },
+        }
+      }, 'waterway-label');
+
+      // add circle layer here
+      map.addLayer({
+        id: 'network-point',
+        type: 'circle',
+        source: 'network',
+        minzoom: 14,
+        paint: {
+          // increase the radius of the circle as the zoom level and dbh value increases
+          'circle-radius': {
+            property: 'record',
+            type: 'exponential',
+            stops: [
+              [{ zoom: 15, value: 1 }, 5],
+              [{ zoom: 15, value: 62 }, 10],
+              [{ zoom: 22, value: 1 }, 20],
+              [{ zoom: 22, value: 62 }, 50],
+            ]
+          },
+          'circle-color': {
+            property: 'record',
+            type: 'exponential',
+            stops: [
+              [0, 'rgba(236,222,239,0)'],
+              [10, 'rgb(236,222,239)'],
+              [20, 'rgb(208,209,230)'],
+              [30, 'rgb(166,189,219)'],
+              [40, 'rgb(103,169,207)'],
+              [50, 'rgb(28,144,153)'],
+              [60, 'rgb(1,108,89)']
+            ]
+          },
+          'circle-stroke-color': 'white',
+          'circle-stroke-width': 1,
+          'circle-opacity': {
+            stops: [
+              [14, 0],
+              [15, 1]
+            ]
+          }
+        }
+      }, 'waterway-label');
+
+
+      // on a regular basis, add more coordinates from the saved list and update the map
+      var i = 0;
+      var timer = window.setInterval(function() {
+        if (i < 144) {
+          var datapath = "geojson_data/tower-"+i+"-network-a-10-mins.geojson";
+          map.getSource('network').setData(datapath);
+          i++;
+        }else{
+          i = 0;
+        }
+      }, 100);
+
+    });
+  </script>
+</body>
+</html>

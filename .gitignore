@@ -1,0 +1,7 @@
+# Directories to ignore
+ten-mins/
+mapbox-gl-js/geojson_data/
+
+# Sensitive data files
+*.csv
+*.geojson
