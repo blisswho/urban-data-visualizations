@@ -1,6 +1,6 @@
 # Directories to ignore
-ten-mins/
-mapbox-gl-js/geojson_data/
+shenzhen-carrier/ten-mins/
+shenzhen-carrier/mapbox-gl-js/geojson_data/
 
 # Sensitive data files
 *.csv
