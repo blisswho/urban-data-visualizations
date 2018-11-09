@@ -1,6 +1,6 @@
 # Urban Data Visualizations
 
-### Usage Instructions
+### Usage Instructions for Carrier Data
 
 1. Input your csv files inside of directory ten-mins. 
 
